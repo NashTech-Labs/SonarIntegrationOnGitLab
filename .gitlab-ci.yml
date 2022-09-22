@@ -1,0 +1,55 @@
+image: node:16.13
+
+stages:
+ - INSTALL
+ - LINT & UNIT
+ -  analyze
+ 
+
+
+INSTALL:
+  stage: INSTALL
+  script:
+    # add depandancy
+    - echo "Installing node modules..."
+    - npm cache clean --force
+  artifacts:
+    paths:
+      - node_modules
+
+TESTING_UNIT:
+  stage: LINT & UNIT
+  dependencies:
+    - INSTALL
+  needs: ['INSTALL']
+  script:
+    - echo "Running uni tests ..."
+    - npm run test
+  after_script:
+    - echo "==> Testing completed"
+  artifacts:
+    when: always
+    name: unit_coverage
+    paths:
+      - coverage
+analyze:sonar:
+  stage: analyze
+  image:
+    name: sonarsource/sonar-scanner-cli:4.5
+    entrypoint: [""]
+  variables:
+    # Defines the location of the analysis task cache
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: 0
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - npm run test
+    - sonar-scanner 
+  rules:
+   
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - when: never
